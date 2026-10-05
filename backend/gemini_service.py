@@ -10,7 +10,7 @@ import json
 import re
 import google.generativeai as genai
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 # The prompt is written to force Gemini to return ONLY JSON, nothing else.
 PROMPT = """You are a medical prescription reading assistant.
