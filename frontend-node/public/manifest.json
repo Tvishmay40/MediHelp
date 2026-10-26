@@ -1,0 +1,9 @@
+{
+  "name": "Medi Help - AI Prescription & Medicine Companion",
+  "short_name": "MediHelp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e0e5ec",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary"
+}

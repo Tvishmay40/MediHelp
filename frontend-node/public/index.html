@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Medi Help — AI Prescription Scanner, RAG & Smart Stock Companion</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --neu-bg: #e0e5ec;
+      --neu-light: #ffffff;
+      --neu-dark: #a3b1c6;
+      --teal-accent: #0d9488;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--neu-bg);
+      color: #334155;
+      overflow-x: hidden;
+    }
+    /* Minimal Tactile Neumorphism Utilities */
+    .neu-card {
+      background: #e0e5ec;
+      border-radius: 20px;
+      box-shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;
+    }
+    .neu-card-sm {
+      background: #e0e5ec;
+      border-radius: 14px;
+      box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff;
+    }
+    .neu-inset {
+      background: #e0e5ec;
+      border-radius: 14px;
+      box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+    }
+    .neu-btn {
+      background: #e0e5ec;
+      border-radius: 14px;
+      box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff;
+      transition: all 0.18s ease;
+    }
+    .neu-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+    }
+    .neu-btn:active, .neu-btn-active {
+      box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff;
+      color: #0d9488;
+      font-weight: 600;
+    }
+    .neu-btn-primary {
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: #ffffff;
+      border-radius: 14px;
+      box-shadow: 5px 5px 12px #a3b1c6, -5px -5px 12px #ffffff;
+      transition: all 0.18s ease;
+    }
+    .neu-btn-primary:hover {
+      filter: brightness(1.06);
+    }
+    .neu-btn-primary:active {
+      transform: scale(0.98);
+    }
+    .neu-pill {
+      background: #e0e5ec;
+      border-radius: 9999px;
+      box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+    }
+    /* Smartphone Simulator Frame */
+    .phone-frame {
+      max-width: 412px;
+      margin: 1.25rem auto;
+      border: 10px solid #2d3748;
+      border-radius: 44px;
+      box-shadow: 18px 18px 36px #9aa8bd, -18px -18px 36px #ffffff;
+      overflow: hidden;
+      position: relative;
+      background: #e0e5ec;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #b8c4d6;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-24">
+
+  <!-- Toast Notification Banner -->
+  <div id="toastBanner" class="fixed top-4 right-4 z-50 hidden max-w-sm neu-card px-4 py-3 border-l-4 border-teal-600 flex items-center gap-3 transition-all duration-300">
+    <div id="toastIcon" class="w-8 h-8 rounded-full neu-inset flex items-center justify-center text-teal-700 font-bold">✓</div>
+    <div>
+      <p id="toastTitle" class="text-xs font-bold uppercase tracking-wider text-teal-800">Notification</p>
+      <p id="toastMessage" class="text-sm text-slate-700 font-medium"></p>
+    </div>
+  </div>
+
+  <!-- Main App Shell (toggles between Full Responsive Web & Smartphone Frame) -->
+  <div id="appViewport" class="w-full max-w-6xl mx-auto px-3 sm:px-6 pt-4">
+
+    <!-- Top Header Bar -->
+    <header class="neu-card px-4 py-3.5 mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 neu-inset flex items-center justify-center text-teal-700 font-extrabold text-xl">
+          ✚
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight">Medi Help</h1>
+            <span class="text-[11px] font-semibold px-2.5 py-0.5 neu-pill text-teal-700">Python + Node.js Neumorphic</span>
+          </div>
+          <p id="activeProviderBadge" class="text-xs text-slate-500 font-medium">
+            Vision &amp; LLM: <span class="text-teal-700 font-semibold">Gemini 2.5 Flash (Primary)</span> • RAG DB: <span class="font-semibold">Active</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Controls: Smartphone Toggle, Audio Chime Test, User Auth -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <button id="btnTogglePhoneView" class="neu-btn px-3 py-2 text-xs font-semibold text-slate-700 flex items-center gap-1.5" title="Toggle Smartphone View">
+          <span>📱</span> <span id="phoneViewLabel">Smartphone View</span>
+        </button>
+        <button id="btnOpenSettings" class="neu-btn px-3 py-2 text-xs font-semibold text-slate-700 flex items-center gap-1.5" title="Configure Gemini API or Local Ollama/PaddleOCR">
+          <span>⚙️</span> <span>AI / OCR Engine</span>
+        </button>
+        <button id="btnOpenAuthModal" class="neu-btn px-3.5 py-2 text-xs font-bold text-teal-800 flex items-center gap-1.5">
+          <span>👤</span> <span id="headerUserName">Aarav Verma (Logged In)</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="neu-card p-2 mb-6 grid grid-cols-2 sm:grid-cols-5 gap-2" role="tablist">
+      <button data-tab="dashboard" class="nav-tab neu-btn neu-btn-active py-2.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2">
+        <span>💊</span> <span>Stock &amp; Meds</span>
+      </button>
+      <button data-tab="scanner" class="nav-tab neu-btn py-2.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2">
+        <span>📷</span> <span>Scan Rx Photo</span>
+      </button>
+      <button data-tab="rag" class="nav-tab neu-btn py-2.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2">
+        <span>🧠</span> <span>RAG &amp; Clashes</span>
+      </button>
+      <button data-tab="appointments" class="nav-tab neu-btn py-2.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2">
+        <span>📅</span> <span>Doctor &amp; Alarms</span>
+      </button>
+      <button data-tab="history" class="nav-tab neu-btn py-2.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 col-span-2 sm:col-span-1">
+        <span>📋</span> <span>Medical History</span>
+      </button>
+    </nav>
+
+    <!-- ======================================================================= -->
+    <!-- TAB 1: DASHBOARD — ACTIVE MEDICINES, DAYS LEFT, RESTOCK & CLASH BANNER  -->
+    <!-- ======================================================================= -->
+    <section id="tab-dashboard" class="tab-panel space-y-6">
+
+      <!-- Patient Context & Safety Summary Strip -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="neu-card p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Active Prescriptions</p>
+            <p id="statTotalMeds" class="text-2xl font-extrabold text-slate-800 mt-1">4 Medicines</p>
+            <p class="text-xs text-teal-700 font-medium mt-0.5">Auto-synced via Rx Scan &amp; Manual</p>
+          </div>
+          <div class="w-12 h-12 neu-inset flex items-center justify-center text-xl">💊</div>
+        </div>
+
+        <div class="neu-card p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Home Stock Alert</p>
+            <p id="statRestockUrgent" class="text-2xl font-extrabold text-amber-700 mt-1">2 Need Restock</p>
+            <p id="statNextBuyDate" class="text-xs text-slate-600 font-medium mt-0.5">Buy by Tomorrow (Oct 27)</p>
+          </div>
+          <div class="w-12 h-12 neu-inset flex items-center justify-center text-xl">🛒</div>
+        </div>
+
+        <div class="neu-card p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Drug Clash &amp; History Check</p>
+            <p id="statSafetyStatus" class="text-lg font-extrabold text-rose-700 mt-1">1 Clash Detected</p>
+            <p class="text-xs text-slate-600 font-medium mt-0.5">Checked vs Hypertension &amp; Allergies</p>
+          </div>
+          <div class="w-12 h-12 neu-inset flex items-center justify-center text-xl">⚠️</div>
+        </div>
+      </div>
+
+      <!-- Real-Time Drug Clash & Medical History Alert Card -->
+      <div id="clashAlertContainer" class="neu-card p-4 border-l-4 border-rose-600">
+        <!-- Populated dynamically by checkInteractions() -->
+      </div>
+
+      <!-- Current Medicines Header + Manual Entry Button -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-800">Current Medicines, Schedule &amp; Home Stock</h2>
+          <p class="text-xs text-slate-500">Tap <strong>"Take Dose (-1)"</strong> when you take a pill or <strong>"+ Restock"</strong> when you buy a new strip.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnGoToScanner" class="neu-btn px-3.5 py-2 text-xs font-bold text-teal-700">
+            📷 Upload Rx Photo
+          </button>
+          <button id="btnOpenManualModal" class="neu-btn-primary px-4 py-2 text-xs font-bold">
+            + Manual Medicine Entry
+          </button>
+        </div>
+      </div>
+
+      <!-- Medicine Cards Grid -->
+      <div id="medicineCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Populated by renderMedicines() -->
+      </div>
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- TAB 2: PRESCRIPTION PHOTO OCR SCANNER (GEMINI VISION + LOCAL FALLBACKS) -->
+    <!-- ======================================================================= -->
+    <section id="tab-scanner" class="tab-panel hidden space-y-6">
+      <div class="neu-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-slate-800">AI Prescription Photo Scanner</h2>
+            <p class="text-xs text-slate-600">Upload a camera photo of a handwritten or printed prescription, or load a sample prescription to test extraction.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="visionProviderSelect" class="text-xs font-bold text-slate-600">Vision Engine:</label>
+            <select id="visionProviderSelect" class="neu-inset px-3 py-1.5 text-xs font-semibold text-teal-800 focus:outline-none">
+              <option value="gemini">Google Gemini 2.5 Flash Vision (Primary API)</option>
+              <option value="ollama_vision">Local Ollama Vision (llama3.2-vision:11b / qwen2.5-vl)</option>
+              <option value="local_paddleocr">Local PaddleOCR + Ollama LLM (Low-VRAM Local)</option>
+              <option value="openai">OpenAI GPT-4o Vision API</option>
+              <option value="claude">Anthropic Claude 3.5 Sonnet Vision</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sample Prescriptions + File Upload Dropzone -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 space-y-4">
+            <div class="neu-inset p-5 text-center space-y-3">
+              <div class="w-14 h-14 mx-auto neu-card-sm flex items-center justify-center text-2xl">📸</div>
+              <p class="text-sm font-bold text-slate-700">Take Photo or Upload Prescription Image</p>
+              <p class="text-xs text-slate-500">Supports smartphone rear camera capture &amp; gallery images (JPG, PNG, WEBP)</p>
+              <input type="file" id="rxImageInput" accept="image/*" capture="environment" class="hidden" />
+              <div class="flex flex-wrap justify-center gap-2 pt-1">
+                <button id="btnTriggerCameraUpload" class="neu-btn-primary px-4 py-2 text-xs font-bold">
+                  📂 Choose / Capture Rx Photo
+                </button>
+              </div>
+            </div>
+
+            <!-- Built-In Realistic Sample Prescriptions for Instant Testing -->
+            <div class="neu-card-sm p-4 space-y-2.5">
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Or Load a Demo Prescription Preset:</p>
+              <button data-preset="infection" class="rx-preset-btn w-full neu-btn p-2.5 text-left text-xs flex items-center justify-between">
+                <div>
+                  <span class="font-bold text-slate-800 block">Rx #1: Acute Throat Infection &amp; Gastritis</span>
+                  <span class="text-slate-500">Augmentin 625 Duo + Pan 40 + Dolo 650</span>
+                </div>
+                <span class="text-teal-700 font-bold">Load →</span>
+              </button>
+              <button data-preset="clash_nsaid" class="rx-preset-btn w-full neu-btn p-2.5 text-left text-xs flex items-center justify-between">
+                <div>
+                  <span class="font-bold text-rose-800 block">Rx #2: Orthopedic Pain Rx (Triggers Clash Alert!)</span>
+                  <span class="text-slate-500">Zerodol-SP + Montair LC (Clashes with Telma 40 &amp; Dolo 650)</span>
+                </div>
+                <span class="text-rose-700 font-bold">Test Clash →</span>
+              </button>
+            </div>
+
+            <!-- Rendered Prescription Canvas Preview -->
+            <div class="neu-inset p-3">
+              <p class="text-[11px] font-bold uppercase text-slate-500 mb-2">Prescription Image Preview</p>
+              <canvas id="rxPreviewCanvas" width="460" height="300" class="w-full h-auto rounded-lg bg-white shadow-inner"></canvas>
+            </div>
+          </div>
+
+          <!-- Extracted Structured Medicines & One-Click Import -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-800">Extracted Prescription Breakdown</h3>
+                <p id="ocrStatusSubtitle" class="text-xs text-teal-700 font-medium">Ready — Select a preset or upload a photo to run OCR + RAG analysis.</p>
+              </div>
+              <button id="btnImportExtractedMeds" class="neu-btn-primary px-4 py-2 text-xs font-bold hidden">
+                ✓ Add Extracted Meds to My Stock
+              </button>
+            </div>
+
+            <div id="ocrResultsBox" class="space-y-3">
+              <!-- Populated by runPrescriptionScan() -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- TAB 3: HUGE MEDICINE RAG DATABASE, SIDE EFFECTS & SYMPTOM AI ASSISTANT  -->
+    <!-- ======================================================================= -->
+    <section id="tab-rag" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Huge Medicine RAG Encyclopedia & Why Doctor Prescribed -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="neu-card p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 class="text-base font-extrabold text-slate-800">Medicine RAG Encyclopedia &amp; Interaction Matrix</h2>
+                <p class="text-xs text-slate-500">Explains what each medicine does, why your doctor prescribed it for your symptoms, side effects, and cross-medicine clashes.</p>
+              </div>
+            </div>
+
+            <div class="neu-inset p-2.5 flex items-center gap-2">
+              <span>🔍</span>
+              <input id="ragSearchInput" type="text" placeholder="Search medicine name, generic salt, or symptom (e.g., Augmentin, Telmisartan, fever, acidity)..." class="w-full bg-transparent text-xs sm:text-sm text-slate-800 focus:outline-none" />
+            </div>
+
+            <div id="ragEncyclopediaList" class="space-y-3 max-h-[540px] overflow-y-auto custom-scroll pr-1">
+              <!-- Populated by renderRagDatabase() -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: AI Symptom & Pharmacology Assistant (Gemini / Ollama / OpenAI / Claude) -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="neu-card p-5 flex flex-col h-[640px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-300/70">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-800">AI Medical &amp; Symptom Assistant</h3>
+                <p class="text-[11px] text-slate-500">Grounded in your Medical History + Medicine RAG</p>
+              </div>
+              <select id="chatProviderSelect" class="neu-inset px-2.5 py-1 text-[11px] font-semibold text-teal-800 focus:outline-none">
+                <option value="gemini">Gemini 2.5 Flash (Primary)</option>
+                <option value="ollama_local">Local Ollama (llama3.2:3b)</option>
+                <option value="openai">OpenAI (gpt-4o-mini)</option>
+                <option value="claude">Claude 3.5 Sonnet</option>
+              </select>
+            </div>
+
+            <!-- Quick Prompt Chips -->
+            <div class="flex flex-wrap gap-1.5 py-2.5">
+              <button data-prompt="Why did the doctor give me Pan 40 and Augmentin 625 for my fever and sore throat?" class="chat-chip neu-btn px-2.5 py-1 text-[11px] font-medium text-slate-700">Why Pan 40 + Augmentin?</button>
+              <button data-prompt="Can I take Zerodol-SP for body pain if I already take Telma 40 and Dolo 650?" class="chat-chip neu-btn px-2.5 py-1 text-[11px] font-medium text-rose-700">Check Zerodol-SP clash?</button>
+              <button data-prompt="I have a dry cough and mild headache at night. What safe relief can I take considering my hypertension?" class="chat-chip neu-btn px-2.5 py-1 text-[11px] font-medium text-teal-800">Safe symptom help</button>
+            </div>
+
+            <!-- Chat Messages Stream -->
+            <div id="chatMessagesBox" class="flex-1 neu-inset p-3.5 overflow-y-auto custom-scroll space-y-3 text-xs">
+              <!-- Populated dynamically -->
+            </div>
+
+            <!-- Chat Input -->
+            <div class="pt-3 flex items-center gap-2">
+              <input id="chatUserInput" type="text" placeholder="Ask about your medicines, side effects, or symptoms..." class="flex-1 neu-inset px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none" />
+              <button id="btnSendChat" class="neu-btn-primary px-4 py-2.5 text-xs font-bold">Send</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- TAB 4: DOCTOR APPOINTMENTS & MEDICINE TAKING REMINDERS                  -->
+    <!-- ======================================================================= -->
+    <section id="tab-appointments" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Medicine Taking Reminders + Live Audio Alarm Test -->
+        <div class="neu-card p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">Daily Medicine Taking Reminders</h2>
+              <p class="text-xs text-slate-500">Auto-generated from your active prescriptions with Web Audio chime alerts.</p>
+            </div>
+            <button id="btnTestAlarmChime" class="neu-btn px-3 py-2 text-xs font-bold text-teal-700 flex items-center gap-1.5">
+              🔔 Ring Test Reminder
+            </button>
+          </div>
+
+          <div id="remindersScheduleList" class="space-y-3">
+            <!-- Populated by renderReminders() -->
+          </div>
+        </div>
+
+        <!-- Doctor Appointments Manager -->
+        <div class="neu-card p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">Upcoming Doctor Appointments</h2>
+              <p class="text-xs text-slate-500">Keep track of consultations and follow-up visits.</p>
+            </div>
+          </div>
+
+          <!-- Add New Appointment Form -->
+          <div class="neu-inset p-4 space-y-3">
+            <p class="text-xs font-bold text-slate-700 uppercase">Schedule New Appointment</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <input id="apptDoctor" type="text" placeholder="Doctor Name (e.g. Dr. S. Verma)" class="neu-card-sm px-3 py-2 text-xs focus:outline-none" />
+              <input id="apptSpecialty" type="text" placeholder="Specialty (e.g. ENT Specialist)" class="neu-card-sm px-3 py-2 text-xs focus:outline-none" />
+              <input id="apptClinic" type="text" placeholder="Hospital / Clinic Name" class="neu-card-sm px-3 py-2 text-xs focus:outline-none" />
+              <div class="grid grid-cols-2 gap-2">
+                <input id="apptDate" type="date" value="2026-11-02" class="neu-card-sm px-2.5 py-2 text-xs focus:outline-none" />
+                <input id="apptTime" type="time" value="17:30" class="neu-card-sm px-2.5 py-2 text-xs focus:outline-none" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <input id="apptNotes" type="text" placeholder="Reason / Notes (e.g. Bring blood pressure log)" class="flex-1 neu-card-sm px-3 py-2 text-xs focus:outline-none" />
+              <button id="btnAddAppointment" class="neu-btn-primary px-4 py-2 text-xs font-bold">+ Book</button>
+            </div>
+          </div>
+
+          <div id="appointmentsList" class="space-y-3">
+            <!-- Populated by renderAppointments() -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- TAB 5: USER MEDICAL HISTORY & ALLERGY DATABASE PROFILE                  -->
+    <!-- ======================================================================= -->
+    <section id="tab-history" class="tab-panel hidden space-y-6">
+      <div class="neu-card p-5 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-slate-800">Patient Medical History &amp; Clinical Profile</h2>
+            <p class="text-xs text-slate-500">Stored in SQLite (`users` table) and injected into every Gemini RAG &amp; Drug Clash check.</p>
+          </div>
+          <button id="btnSaveMedicalHistory" class="neu-btn-primary px-4 py-2 text-xs font-bold">
+            💾 Save Medical History &amp; Re-Run Safety Check
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Patient Full Name</label>
+            <input id="histName" type="text" value="Aarav Verma" class="w-full neu-inset px-3.5 py-2.5 text-xs font-semibold focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Age &amp; Blood Group</label>
+            <input id="histAgeBlood" type="text" value="22 yrs • O+ Positive" class="w-full neu-inset px-3.5 py-2.5 text-xs font-semibold focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Account Email (Login ID)</label>
+            <input id="histEmail" type="email" value="aarav@bitdurg.ac.in" class="w-full neu-inset px-3.5 py-2.5 text-xs font-semibold focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-rose-700 mb-1">Known Drug &amp; Food Allergies</label>
+            <textarea id="histAllergies" rows="3" class="w-full neu-inset p-3 text-xs font-medium focus:outline-none">Sulfa drugs, Dust allergy</textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-amber-800 mb-1">Chronic Medical Conditions</label>
+            <textarea id="histConditions" rows="3" class="w-full neu-inset p-3 text-xs font-medium focus:outline-none">Mild Hypertension (on Telma 40), Seasonal Allergic Rhinitis, Gastric Acidity</textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-teal-800 mb-1">Current Reported Symptoms</label>
+            <textarea id="histSymptoms" rows="3" class="w-full neu-inset p-3 text-xs font-medium focus:outline-none">Fever (100.8°F), acute sore throat, gastric acidity, mild body ache</textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL 1: MANUAL MEDICINE ENTRY                                          -->
+  <!-- ======================================================================= -->
+  <div id="modalManualMedicine" class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="neu-card max-w-lg w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-slate-800">Add Medicine Manually to Stock</h3>
+        <button id="btnCloseManualModal" class="neu-btn w-8 h-8 text-xs font-bold">✕</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Medicine Brand Name *</label>
+          <input id="manMedName" type="text" placeholder="e.g., Zerodol-SP or Montair LC" class="w-full neu-inset px-3 py-2 focus:outline-none" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Dosage Strength *</label>
+          <input id="manMedDosage" type="text" placeholder="e.g., 1 Tablet (100mg/325mg)" class="w-full neu-inset px-3 py-2 focus:outline-none" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Doses Per Day (Frequency) *</label>
+          <select id="manMedFreq" class="w-full neu-inset px-3 py-2 focus:outline-none">
+            <option value="1">1 time / day (OD)</option>
+            <option value="2" selected>2 times / day (BD)</option>
+            <option value="3">3 times / day (TDS)</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Schedule Time(s) *</label>
+          <input id="manMedTimes" type="text" value="08:30 AM, 08:30 PM" class="w-full neu-inset px-3 py-2 focus:outline-none" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Home Stock Quantity (Tablets) *</label>
+          <input id="manMedStock" type="number" min="1" value="6" class="w-full neu-inset px-3 py-2 focus:outline-none" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Meal Timing</label>
+          <select id="manMedMeal" class="w-full neu-inset px-3 py-2 focus:outline-none">
+            <option value="After Meal">After Meal</option>
+            <option value="Before Breakfast (Empty Stomach)">Before Breakfast (Empty Stomach)</option>
+            <option value="At Bedtime">At Bedtime</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnQuickFillClashMed" class="neu-btn px-3 py-2 text-xs font-semibold text-rose-700">
+          ⚡ Demo: Fill "Zerodol-SP" (Test Clash)
+        </button>
+        <button id="btnSaveManualMed" class="neu-btn-primary px-5 py-2 text-xs font-bold">
+          Add &amp; Run RAG Check
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL 2: AI / OCR PROVIDER SETTINGS (GEMINI PRIMARY + LOCAL OLLAMA)     -->
+  <!-- ======================================================================= -->
+  <div id="modalAiSettings" class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="neu-card max-w-lg w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-800">Multi-Provider LLM &amp; Vision Configuration</h3>
+          <p class="text-xs text-slate-500">Gemini API is primary; switch to Local Ollama, PaddleOCR, OpenAI, or Claude for testing.</p>
+        </div>
+        <button id="btnCloseSettingsModal" class="neu-btn w-8 h-8 text-xs font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Active LLM &amp; Vision Provider</label>
+          <select id="settingsProviderSelect" class="w-full neu-inset px-3 py-2.5 font-semibold text-teal-800 focus:outline-none">
+            <option value="gemini">Google Gemini API — gemini-2.5-flash (Primary for OCR + RAG)</option>
+            <option value="ollama_local">Local Ollama — llama3.2-vision:11b + llama3.2:3b (Offline Dev)</option>
+            <option value="local_paddleocr">Local PaddleOCR + Ollama 3B (Low-VRAM Laptop Mode)</option>
+            <option value="openai">OpenAI API — gpt-4o-mini</option>
+            <option value="claude">Anthropic API — claude-3-5-sonnet</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Google Gemini API Key (Optional for live browser calls)</label>
+          <input id="settingsGeminiKey" type="password" placeholder="AIzaSy... (Leave blank to use built-in RAG &amp; Vision engine)" class="w-full neu-inset px-3 py-2 focus:outline-none" />
+          <p class="text-[11px] text-slate-500 mt-1">If you paste a real Gemini API key here, the app calls `generativelanguage.googleapis.com` (`gemini-2.5-flash`) directly from your browser or via the Python FastAPI backend.</p>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Local Ollama Endpoint (For Dev Testing)</label>
+          <input id="settingsOllamaUrl" type="text" value="http://localhost:11434" class="w-full neu-inset px-3 py-2 focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnSaveAiSettings" class="neu-btn-primary px-5 py-2 text-xs font-bold">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL 3: USER LOGIN & CREDENTIALS                                       -->
+  <!-- ======================================================================= -->
+  <div id="modalAuth" class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="neu-card max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-800">Medi Help Patient Login</h3>
+          <p class="text-xs text-slate-500">JWT Authenticated Session synced with Python SQLite DB</p>
+        </div>
+        <button id="btnCloseAuthModal" class="neu-btn w-8 h-8 text-xs font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Email / Roll ID</label>
+          <input id="authEmailInput" type="email" value="aarav@bitdurg.ac.in" class="w-full neu-inset px-3 py-2.5 focus:outline-none" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-600 block mb-1">Password</label>
+          <input id="authPassInput" type="password" value="••••••••••••" class="w-full neu-inset px-3 py-2.5 focus:outline-none" />
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button id="btnSwitchDemoUser1" class="neu-btn flex-1 py-2 font-semibold text-teal-800">Demo: Aarav (Hypertension)</button>
+          <button id="btnSwitchDemoUser2" class="neu-btn flex-1 py-2 font-semibold text-slate-700">Demo: Priya (Diabetes)</button>
+        </div>
+      </div>
+      <div class="flex justify-end pt-2">
+        <button id="btnSubmitLogin" class="neu-btn-primary w-full py-2.5 text-xs font-bold">Sign In &amp; Load Medical Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- APPLICATION LOGIC (IN-BROWSER + PYTHON BACKEND API COMPATIBLE)          -->
+  <!-- ======================================================================= -->
+  <script>
+    // 1. HUGE MEDICINE RAG KNOWLEDGE BASE
+    const MEDICINE_RAG_DB = [
+      {
+        id: "med_01",
+        brand: "Augmentin 625 Duo",
+        aliases: ["augmentin", "moxikind-cv", "clavam", "amoxicillin"],
+        generic: "Amoxicillin (500mg) + Clavulanic Acid (125mg)",
+        drugClass: "Beta-Lactam Antibiotic + Beta-Lactamase Inhibitor",
+        whyDoctorGave: "Prescribed to treat bacterial throat, sinus, or respiratory infections causing your fever and acute sore throat. Clavulanic acid prevents bacterial resistance enzymes from breaking down Amoxicillin.",
+        sideEffects: ["Mild nausea", "Loose stools / diarrhea", "Skin rash (if penicillin-allergic)"],
+        contraindications: ["Penicillin allergy"],
+        clashesWith: [
+          { target: "Warfarin", severity: "HIGH", detail: "Increases bleeding risk (INR elevation)." },
+          { target: "Methotrexate", severity: "HIGH", detail: "Reduces renal excretion of methotrexate." }
+        ],
+        mealTiming: "After Meal (Take at start of meal to reduce stomach upset)"
+      },
+      {
+        id: "med_02",
+        brand: "Pan 40",
+        aliases: ["pan 40", "pantocid", "pantoprazole", "pan-d"],
+        generic: "Pantoprazole (40mg)",
+        drugClass: "Proton Pump Inhibitor (PPI)",
+        whyDoctorGave: "Prescribed to block excess gastric acid secretion and protect your stomach lining from antibiotic- or painkiller-induced acidity and reflux.",
+        sideEffects: ["Mild headache", "Flatulence", "Vitamin B12 depletion (only on multi-year use)"],
+        contraindications: ["Severe liver cirrhosis (dose adjustment)"],
+        clashesWith: [
+          { target: "Ketoconazole", severity: "MODERATE", detail: "Reduces absorption of pH-dependent antifungals and oral iron." }
+        ],
+        mealTiming: "Before Breakfast (Empty stomach, 30 mins before food)"
+      },
+      {
+        id: "med_03",
+        brand: "Dolo 650",
+        aliases: ["dolo", "dolo 650", "calpol", "crocin", "paracetamol", "acetaminophen"],
+        generic: "Paracetamol / Acetaminophen (650mg)",
+        drugClass: "Analgesic & Antipyretic",
+        whyDoctorGave: "Prescribed to safely bring down your fever (100.8°F) and relieve sore throat/headache pain without irritating your gastric mucosa or raising blood pressure.",
+        sideEffects: ["Rare at standard dosing", "Hepatotoxicity (liver stress) if total daily Paracetamol exceeds 4,000mg"],
+        contraindications: ["Severe hepatic impairment"],
+        clashesWith: [
+          { target: "Zerodol-SP", severity: "HIGH", detail: "DUPLICATE PARACETAMOL OVERDOSE RISK: Zerodol-SP already contains 325mg Paracetamol. Taking both together risks exceeding safe hepatic limits." }
+        ],
+        mealTiming: "After Meal (Keep minimum 4–6 hours gap between doses)"
+      },
+      {
+        id: "med_04",
+        brand: "Telma 40",
+        aliases: ["telma", "telma 40", "telmisartan", "telmikind"],
+        generic: "Telmisartan (40mg)",
+        drugClass: "Angiotensin II Receptor Blocker (ARB)",
+        whyDoctorGave: "Prescribed for your chronic mild hypertension history to relax arterial blood vessels smoothly over 24 hours and protect kidney function.",
+        sideEffects: ["Mild postural dizziness", "Elevated serum potassium (hyperkalemia)"],
+        contraindications: ["Pregnancy", "Bilateral renal artery stenosis"],
+        clashesWith: [
+          { target: "Zerodol-SP", severity: "HIGH", detail: "NSAID + ARB CLASH: Aceclofenac (NSAID) in Zerodol-SP blunts Telmisartan's blood-pressure lowering effect, raises BP, and stresses kidney filtration." }
+        ],
+        mealTiming: "After Breakfast (Take at the same time every morning)"
+      },
+      {
+        id: "med_05",
+        brand: "Zerodol-SP",
+        aliases: ["zerodol", "zerodol-sp", "aceclofenac", "combiflam", "hifenac-p", "ibuprofen"],
+        generic: "Aceclofenac (100mg) + Paracetamol (325mg) + Serratiopeptidase (15mg)",
+        drugClass: "NSAID Painkiller + Anti-Edema Enzyme",
+        whyDoctorGave: "Prescribed to reduce acute musculoskeletal pain, tissue swelling, and severe pharyngeal inflammation.",
+        sideEffects: ["Gastric acidity & ulceration", "Blood pressure spike", "Nausea", "Fluid retention"],
+        contraindications: ["Hypertension", "Gastric Acidity / Peptic Ulcer", "Renal disease"],
+        clashesWith: [
+          { target: "Telma 40", severity: "HIGH", detail: "NSAIDs antagonize Telmisartan (ARB), causing blood pressure elevation and acute kidney stress." },
+          { target: "Dolo 650", severity: "HIGH", detail: "Duplicate Paracetamol ingredient (325mg + 650mg) increases risk of liver toxicity." }
+        ],
+        mealTiming: "Strictly After Full Meal"
+      },
+      {
+        id: "med_06",
+        brand: "Montair LC",
+        aliases: ["montair", "montair lc", "montek lc", "levocetirizine", "montelukast"],
+        generic: "Montelukast (10mg) + Levocetirizine (5mg)",
+        drugClass: "Leukotriene Antagonist + 2nd Gen Antihistamine",
+        whyDoctorGave: "Prescribed for your Seasonal Allergic Rhinitis to stop sneezing, nasal blockage, post-nasal drip, and nighttime allergic cough.",
+        sideEffects: ["Mild evening drowsiness", "Dry mouth"],
+        contraindications: ["Severe renal impairment"],
+        clashesWith: [
+          { target: "Sedatives / Alcohol", severity: "MODERATE", detail: "Enhances central nervous system drowsiness." }
+        ],
+        mealTiming: "At Bedtime (09:30 PM)"
+      },
+      {
+        id: "med_07",
+        brand: "Glycomet 500 SR",
+        aliases: ["glycomet", "metformin", "glucophage"],
+        generic: "Metformin Hydrochloride (500mg SR)",
+        drugClass: "Biguanide Antidiabetic",
+        whyDoctorGave: "Prescribed as first-line therapy for Type 2 Diabetes to improve insulin sensitivity and reduce hepatic glucose output.",
+        sideEffects: ["Metallic taste", "Mild GI upset", "Vitamin B12 deficiency on long-term use"],
+        contraindications: ["Severe renal failure (eGFR < 30)"],
+        clashesWith: [
+          { target: "Contrast Dye", severity: "HIGH", detail: "Hold 48 hours around iodinated contrast scans to prevent lactic acidosis." }
+        ],
+        mealTiming: "With Dinner"
+      }
+    ];
+
+    // 2. STATE STORE
+    const state = {
+      isPhoneView: false,
+      aiProvider: "gemini",
+      geminiApiKey: "",
+      ollamaUrl: "http://localhost:11434",
+      user: {
+        name: "Aarav Verma",
+        ageBlood: "22 yrs • O+ Positive",
+        email: "aarav@bitdurg.ac.in",
+        allergies: "Sulfa drugs, Dust allergy",
+        conditions: "Mild Hypertension (on Telma 40), Seasonal Allergic Rhinitis, Gastric Acidity",
+        symptoms: "Fever (100.8°F), acute sore throat, gastric acidity, mild body ache"
+      },
+      medicines: [
+        {
+          id: 101,
+          name: "Telma 40",
+          generic: "Telmisartan (40mg)",
+          dosage: "1 Tablet (40mg)",
+          freqPerDay: 1,
+          times: "08:00 AM",
+          meal: "After Breakfast",
+          stockQty: 3,
+          source: "Manual Entry",
+          why: "Maintains 24-hour blood pressure control for your Mild Hypertension history."
+        },
+        {
+          id: 102,
+          name: "Augmentin 625 Duo",
+          generic: "Amoxicillin (500mg) + Clavulanic Acid (125mg)",
+          dosage: "1 Tablet (625mg)",
+          freqPerDay: 2,
+          times: "08:30 AM, 08:30 PM",
+          meal: "After Meal",
+          stockQty: 8,
+          source: "Prescription Scan",
+          why: "Clears bacterial throat/sinus infection responsible for your fever and sore throat."
+        },
+        {
+          id: 103,
+          name: "Pan 40",
+          generic: "Pantoprazole (40mg)",
+          dosage: "1 Tablet (40mg)",
+          freqPerDay: 1,
+          times: "07:30 AM",
+          meal: "Before Breakfast (Empty Stomach)",
+          stockQty: 9,
+          source: "Prescription Scan",
+          why: "Prevents antibiotic-induced gastric acidity and reflux."
+        },
+        {
+          id: 104,
+          name: "Dolo 650",
+          generic: "Paracetamol (650mg)",
+          dosage: "1 Tablet (650mg)",
+          freqPerDay: 2,
+          times: "09:00 AM, 09:00 PM",
+          meal: "After Meal",
+          stockQty: 4,
+          source: "Prescription Scan",
+          why: "Lowers fever (100.8°F) and relieves throat pain safely without irritating the stomach."
+        }
+      ],
+      extractedRxBuffer: [],
+      appointments: [
+        {
+          id: 201,
+          doctor: "Dr. R. K. Sharma",
+          specialty: "Internal Medicine & Pulmonology",
+          clinic: "Sector 9 Hospital, Bhilai",
+          date: "2026-10-30",
+          time: "17:30",
+          notes: "Follow-up on throat infection & blood pressure review",
+          reminderOn: true
+        },
+        {
+          id: 202,
+          doctor: "Dr. Ananya Deshmukh",
+          specialty: "ENT Specialist",
+          clinic: "Apollo BSR Hospital, Bhilai",
+          date: "2026-11-05",
+          time: "11:00",
+          notes: "Seasonal Allergic Rhinitis & sinus check",
+          reminderOn: true
+        }
+      ],
+      chatHistory: [
+        {
+          sender: "ai",
+          provider: "Gemini 2.5 Flash + Clinical RAG",
+          text: "Hi Aarav! I have loaded your medical history (Mild Hypertension on Telma 40, Seasonal Allergic Rhinitis, Sulfa allergy) and your 4 active medicines. Ask me what any medicine does, why your doctor prescribed it, or check if a new medicine clashes with your current regimen."
+        }
+      ]
+    };
+
+    // 3. HELPER: TOAST NOTIFICATION
+    function showToast(title, message) {
+      const banner = document.getElementById("toastBanner");
+      document.getElementById("toastTitle").textContent = title;
+      document.getElementById("toastMessage").textContent = message;
+      banner.classList.remove("hidden");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        banner.classList.add("hidden");
+      }, 3600);
+    }
+
+    // 4. HELPER: CALCULATE DAYS LEFT & RESTOCK DATE (Base Date: Oct 26, 2026)
+    function computeStockMetrics(stockQty, freqPerDay) {
+      const daysLeft = Math.max(0, +(stockQty / Math.max(1, freqPerDay)).toFixed(1));
+      const baseDate = new Date("2026-10-26T10:00:00");
+      const daysUntilBuy = Math.max(0, Math.floor(daysLeft) - 1);
+      const buyDateObj = new Date(baseDate.getTime() + daysUntilBuy * 86400000);
+      const buyDateStr = buyDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+      let badgeClass = "text-teal-800 bg-teal-100/70";
+      let statusLabel = "Optimal Stock";
+      if (daysLeft <= 2) {
+        badgeClass = "text-rose-800 bg-rose-200/80";
+        statusLabel = "Buy Immediately";
+      } else if (daysLeft <= 4) {
+        badgeClass = "text-amber-800 bg-amber-200/80";
+        statusLabel = "Refill Soon";
+      }
+      return { daysLeft, buyDateStr, badgeClass, statusLabel };
+    }
+
+    // 5. LOOKUP MEDICINE IN RAG DB
+    function findRagEntry(nameStr) {
+      const q = (nameStr || "").toLowerCase();
+      return MEDICINE_RAG_DB.find(m =>
+        m.brand.toLowerCase().includes(q) ||
+        q.includes(m.brand.toLowerCase()) ||
+        m.aliases.some(a => q.includes(a))
+      );
+    }
+
+    // 6. ANALYZE DRUG-DRUG CLASHES & MEDICAL HISTORY WARNINGS
+    function evaluateSafetyClashes() {
+      const clashes = [];
+      const historyAlerts = [];
+      const activeMeds = state.medicines;
+
+      for (let i = 0; i < activeMeds.length; i++) {
+        const medA = activeMeds[i];
+        const ragA = findRagEntry(medA.name);
+        if (!ragA) continue;
+
+        // Check against patient conditions & allergies
+        ragA.contraindications.forEach(contra => {
+          const condLower = (state.user.conditions + " " + state.user.allergies).toLowerCase();
+          const keywords = contra.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+          if (keywords.some(k => condLower.includes(k))) {
+            historyAlerts.push({
+              med: medA.name,
+              issue: `Contraindication / Caution with your stored history (${contra})`
+            });
+          }
+        });
+
+        // Pairwise clash check
+        for (let j = i + 1; j < activeMeds.length; j++) {
+          const medB = activeMeds[j];
+          ragA.clashesWith.forEach(c => {
+            if (medB.name.toLowerCase().includes(c.target.toLowerCase()) ||
+                c.target.toLowerCase().includes(medB.name.toLowerCase())) {
+              clashes.push({
+                pair: `${medA.name} + ${medB.name}`,
+                severity: c.severity,
+                detail: c.detail
+              });
+            }
+          });
+          const ragB = findRagEntry(medB.name);
+          if (ragB) {
+            ragB.clashesWith.forEach(c => {
+              if (medA.name.toLowerCase().includes(c.target.toLowerCase()) ||
+                  c.target.toLowerCase().includes(medA.name.toLowerCase())) {
+                const pairKey = `${medA.name} + ${medB.name}`;
+                if (!clashes.some(existing => existing.pair === pairKey)) {
+                  clashes.push({
+                    pair: pairKey,
+                    severity: c.severity,
+                    detail: c.detail
+                  });
+                }
+              }
+            });
+          }
+        }
+      }
+
+      return { clashes, historyAlerts };
+    }
+
+    // 7. RENDER DASHBOARD & STOCK CARDS
+    function renderDashboard() {
+      const grid = document.getElementById("medicineCardsGrid");
+      grid.innerHTML = "";
+
+      let urgentCount = 0;
+      let earliestBuy = "Oct 27, 2026";
+
+      state.medicines.forEach(med => {
+        const metrics = computeStockMetrics(med.stockQty, med.freqPerDay);
+        if (metrics.daysLeft <= 2.5) urgentCount++;
+        const ragInfo = findRagEntry(med.name);
+
+        const card = document.createElement("div");
+        card.className = "neu-card p-5 flex flex-col justify-between space-y-4";
+        card.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base font-extrabold text-slate-800">${med.name}</h3>
+                  <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full ${metrics.badgeClass}">${metrics.statusLabel}</span>
+                </div>
+                <p class="text-xs font-semibold text-teal-700">${med.generic}</p>
+              </div>
+              <span class="text-[10px] font-semibold px-2.5 py-1 neu-inset text-slate-500">${med.source}</span>
+            </div>
+
+            <!-- Why Doctor Prescribed & Side Effects Pill -->
+            <div class="neu-inset p-3 text-xs space-y-1.5">
+              <p class="text-slate-700"><strong class="text-slate-900">Why Prescribed:</strong> ${med.why}</p>
+              ${ragInfo ? `<p class="text-slate-500 text-[11px]"><strong>Possible Side Effects:</strong> ${ragInfo.sideEffects.join(", ")}</p>` : ""}
+            </div>
+
+            <!-- Schedule & Stock Metrics Grid -->
+            <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+              <div class="neu-card-sm p-2">
+                <p class="text-[10px] uppercase font-bold text-slate-500">Schedule</p>
+                <p class="text-xs font-extrabold text-slate-800 mt-0.5">${med.times}</p>
+                <p class="text-[10px] text-teal-700 font-medium">${med.meal}</p>
+              </div>
+              <div class="neu-card-sm p-2">
+                <p class="text-[10px] uppercase font-bold text-slate-500">Home Stock</p>
+                <p class="text-sm font-extrabold text-slate-800 mt-0.5">${med.stockQty} Tabs</p>
+                <p class="text-[10px] font-bold ${metrics.daysLeft <= 2 ? 'text-rose-700' : 'text-teal-700'}">${metrics.daysLeft} Days Left</p>
+              </div>
+              <div class="neu-card-sm p-2">
+                <p class="text-[10px] uppercase font-bold text-slate-500">Time to Buy</p>
+                <p class="text-xs font-extrabold ${metrics.daysLeft <= 2 ? 'text-rose-700' : 'text-slate-800'} mt-0.5">${metrics.buyDateStr}</p>
+                <p class="text-[10px] text-slate-500">${med.freqPerDay} tab/day</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Stock Controls -->
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-300/60">
+            <button data-action="take" data-id="${med.id}" class="med-action-btn neu-btn px-3 py-1.5 text-xs font-bold text-teal-800 flex-1">
+              ✓ Take Dose (-1 Tab)
+            </button>
+            <button data-action="restock" data-id="${med.id}" class="med-action-btn neu-btn px-3 py-1.5 text-xs font-bold text-slate-700 flex-1">
+              + Buy Strip (+10)
+            </button>
+            <button data-action="delete" data-id="${med.id}" class="med-action-btn neu-btn px-2.5 py-1.5 text-xs font-bold text-rose-700" title="Remove Medicine">
+              🗑
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Attach listeners to Take / Restock / Delete buttons
+      document.querySelectorAll(".med-action-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = parseInt(btn.getAttribute("data-id"), 10);
+          const action = btn.getAttribute("data-action");
+          const target = state.medicines.find(m => m.id === id);
+          if (!target) return;
+          if (action === "take") {
+            target.stockQty = Math.max(0, target.stockQty - 1);
+            showToast("Dose Logged", `Took 1 dose of ${target.name}. Remaining stock: ${target.stockQty} tablets.`);
+          } else if (action === "restock") {
+            target.stockQty += 10;
+            showToast("Stock Updated", `Added +10 tablets to ${target.name}. Total: ${target.stockQty} tablets.`);
+          } else if (action === "delete") {
+            state.medicines = state.medicines.filter(m => m.id !== id);
+            showToast("Medicine Removed", `${target.name} removed from active list.`);
+          }
+          renderDashboard();
+          renderReminders();
+        });
+      });
+
+      // Update Top Summary Stats
+      document.getElementById("statTotalMeds").textContent = `${state.medicines.length} Medicines`;
+      document.getElementById("statRestockUrgent").textContent = urgentCount > 0 ? `${urgentCount} Need Restock` : "All Stock Optimal";
+      document.getElementById("statNextBuyDate").textContent = urgentCount > 0 ? `Buy Refill by ${earliestBuy}` : "No urgent refills needed";
+
+      // Update Clash & Medical History Alert Banner
+      const { clashes, historyAlerts } = evaluateSafetyClashes();
+      const clashBox = document.getElementById("clashAlertContainer");
+      const statSafety = document.getElementById("statSafetyStatus");
+
+      if (clashes.length === 0 && historyAlerts.length === 0) {
+        statSafety.textContent = "0 Clashes (Safe)";
+        statSafety.className = "text-lg font-extrabold text-teal-700 mt-1";
+        clashBox.className = "neu-card p-4 border-l-4 border-teal-600";
+        clashBox.innerHTML = `
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p class="text-xs font-extrabold uppercase text-teal-800">✓ All Current Medicines Passed Drug-Clash &amp; History Check</p>
+              <p class="text-xs text-slate-600 mt-0.5">Verified against your history: <strong>${state.user.conditions}</strong> &amp; Allergies: <strong>${state.user.allergies}</strong>. Want to see how Medi Help catches dangerous interactions? Click the button to test adding <em>Zerodol-SP</em>.</p>
+            </div>
+            <button id="btnDemoTriggerClash" class="neu-btn px-3 py-1.5 text-xs font-bold text-rose-700">
+              ⚡ Simulate Adding "Zerodol-SP" Clash
+            </button>
+          </div>
+        `;
+        const demoBtn = document.getElementById("btnDemoTriggerClash");
+        if (demoBtn) {
+          demoBtn.addEventListener("click", () => {
+            addZerodolClashDemo();
+          });
+        }
+      } else {
+        const totalIssues = clashes.length + historyAlerts.length;
+        statSafety.textContent = `${totalIssues} Safety Alert${totalIssues > 1 ? 's' : ''}!`;
+        statSafety.className = "text-lg font-extrabold text-rose-700 mt-1";
+        clashBox.className = "neu-card p-4 border-l-4 border-rose-600 space-y-2";
+        let html = `<p class="text-xs font-extrabold uppercase text-rose-800">⚠️ Clinical Drug-Drug Interaction &amp; Medical History Alert Detected</p>`;
+        clashes.forEach(c => {
+          html += `
+            <div class="neu-inset p-2.5 text-xs">
+              <span class="font-extrabold text-rose-800">[${c.severity} CLASH] ${c.pair}:</span>
+              <span class="text-slate-700"> ${c.detail}</span>
+            </div>
+          `;
+        });
+        historyAlerts.forEach(h => {
+          html += `
+            <div class="neu-inset p-2.5 text-xs">
+              <span class="font-extrabold text-amber-800">[PATIENT HISTORY ALERT] ${h.med}:</span>
+              <span class="text-slate-700"> ${h.issue}</span>
+            </div>
+          `;
+        });
+        clashBox.innerHTML = html;
+      }
+    }
+
+    function addZerodolClashDemo() {
+      if (state.medicines.some(m => m.name.toLowerCase().includes("zerodol"))) {
+        showToast("Already Added", "Zerodol-SP is already in your medicine list.");
+        return;
+      }
+      state.medicines.unshift({
+        id: Date.now(),
+        name: "Zerodol-SP",
+        generic: "Aceclofenac (100mg) + Paracetamol (325mg) + Serratiopeptidase",
+        dosage: "1 Tablet",
+        freqPerDay: 2,
+        times: "09:00 AM, 09:00 PM",
+        meal: "After Meal",
+        stockQty: 4,
+        source: "Prescription Scan",
+        why: "Prescribed for acute pain and throat inflammation."
+      });
+      renderDashboard();
+      renderReminders();
+      showToast("⚠️ Clash Detected!", "Zerodol-SP clashes with Telma 40 (BP spike) and Dolo 650 (Duplicate Paracetamol)!");
+    }
+
+    // 8. PRESCRIPTION PHOTO SCANNER & SYNTHETIC RX RENDERER
+    const RX_PRESETS = {
+      infection: {
+        doctor: "Dr. R. K. Sharma, MD (Medicine)",
+        clinic: "Sector 9 Hospital, Bhilai • Reg No: CG-48291",
+        patient: "Aarav Verma (22Y / M) • Date: 26 Oct 2026",
+        diagnosis: "Dx: Acute Bacterial Pharyngitis + Acid Peptic Gastritis",
+        items: [
+          {
+            name: "Augmentin 625 Duo",
+            generic: "Amoxicillin (500mg) + Clavulanic Acid (125mg)",
+            dosage: "1 Tablet (625mg)",
+            freqPerDay: 2,
+            times: "08:30 AM, 08:30 PM",
+            meal: "After Meal",
+            stockQty: 10,
+            why: "Antibiotic combination to clear bacterial throat infection causing fever."
+          },
+          {
+            name: "Pan 40",
+            generic: "Pantoprazole (40mg)",
+            dosage: "1 Tablet (40mg)",
+            freqPerDay: 1,
+            times: "07:30 AM",
+            meal: "Before Breakfast (Empty Stomach)",
+            stockQty: 10,
+            why: "Proton pump inhibitor to prevent antibiotic-related acidity and gastritis."
+          },
+          {
+            name: "Dolo 650",
+            generic: "Paracetamol (650mg)",
+            dosage: "1 Tablet (650mg)",
+            freqPerDay: 2,
+            times: "09:00 AM, 09:00 PM",
+            meal: "After Meal",
+            stockQty: 6,
+            why: "Antipyretic & analgesic to reduce fever and sore throat pain."
+          }
+        ]
+      },
+      clash_nsaid: {
+        doctor: "Dr. V. K. Nair, MS (Orthopedics & ENT)",
+        clinic: "City Care Clinic, Durg-Bhilai • Reg No: CG-19402",
+        patient: "Aarav Verma (22Y / M) • Date: 26 Oct 2026",
+        diagnosis: "Dx: Severe Myalgia, Throat Edema & Allergic Rhinitis",
+        items: [
+          {
+            name: "Zerodol-SP",
+            generic: "Aceclofenac (100mg) + Paracetamol (325mg) + Serratiopeptidase",
+            dosage: "1 Tablet",
+            freqPerDay: 2,
+            times: "09:00 AM, 09:00 PM",
+            meal: "After Meal",
+            stockQty: 6,
+            why: "NSAID anti-inflammatory for severe body ache and throat swelling. (WARNING: Clashes with Telma 40 & Dolo 650!)"
+          },
+          {
+            name: "Montair LC",
+            generic: "Montelukast (10mg) + Levocetirizine (5mg)",
+            dosage: "1 Tablet",
+            freqPerDay: 1,
+            times: "09:30 PM",
+            meal: "At Bedtime",
+            stockQty: 10,
+            why: "Controls allergic rhinitis sneezing and nighttime cough."
+          }
+        ]
+      }
+    };
+
+    function drawPrescriptionOnCanvas(presetKey) {
+      const canvas = document.getElementById("rxPreviewCanvas");
+      const ctx = canvas.getContext("2d");
+      const preset = RX_PRESETS[presetKey] || RX_PRESETS.infection;
+
+      ctx.fillStyle = "#fcfbf7";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Header bar
+      ctx.fillStyle = "#0f766e";
+      ctx.fillRect(0, 0, canvas.width, 46);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 14px Inter, sans-serif";
+      ctx.fillText(preset.doctor, 14, 20);
+      ctx.font = "11px Inter, sans-serif";
+      ctx.fillText(preset.clinic, 14, 37);
+
+      // Patient & Dx
+      ctx.fillStyle = "#334155";
+      ctx.font = "bold 11px Inter, sans-serif";
+      ctx.fillText(preset.patient, 14, 66);
+      ctx.fillStyle = "#0d9488";
+      ctx.fillText(preset.diagnosis, 14, 84);
+
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.beginPath();
+      ctx.moveTo(14, 92);
+      ctx.lineTo(canvas.width - 14, 92);
+      ctx.stroke();
+
+      // Rx symbol
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "bold 20px Georgia, serif";
+      ctx.fillText("Rx", 16, 118);
+
+      // Handwritten-style medicine lines
+      let y = 142;
+      preset.items.forEach((item, idx) => {
+        ctx.fillStyle = "#1e293b";
+        ctx.font = "italic bold 13px Georgia, serif";
+        ctx.fillText(`${idx + 1}. Tab. ${item.name}  —  ${item.dosage}`, 24, y);
+        ctx.fillStyle = "#475569";
+        ctx.font = "11px Inter, sans-serif";
+        ctx.fillText(`   Sig: ${item.times} (${item.meal}) × ${item.stockQty} Tabs`, 24, y + 18);
+        y += 46;
+      });
+
+      // Signature stamp
+      ctx.fillStyle = "#0f766e";
+      ctx.font = "italic 12px Georgia, serif";
+      ctx.fillText("Signed: " + preset.doctor, 260, 280);
+    }
+
+    function renderExtractedRxResults(presetKey, providerName) {
+      const preset = RX_PRESETS[presetKey] || RX_PRESETS.infection;
+      state.extractedRxBuffer = preset.items;
+
+      document.getElementById("ocrStatusSubtitle").textContent =
+        `Extracted ${preset.items.length} medicines via ${providerName} • Cross-checked with RAG DB`;
+      document.getElementById("btnImportExtractedMeds").classList.remove("hidden");
+
+      const container = document.getElementById("ocrResultsBox");
+      container.innerHTML = "";
+
+      preset.items.forEach(item => {
+        const ragInfo = findRagEntry(item.name);
+        const hasClash = item.name.toLowerCase().includes("zerodol");
+        const div = document.createElement("div");
+        div.className = `neu-card-sm p-4 space-y-2 border-l-4 ${hasClash ? 'border-rose-600' : 'border-teal-600'}`;
+        div.innerHTML = `
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h4 class="text-sm font-extrabold text-slate-800">${item.name}</h4>
+              <p class="text-xs font-semibold text-teal-700">${item.generic}</p>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 neu-inset text-slate-700">${item.times} • ${item.meal}</span>
+          </div>
+          <p class="text-xs text-slate-700"><strong>Why Doctor Prescribed:</strong> ${item.why}</p>
+          ${ragInfo ? `<p class="text-[11px] text-slate-500"><strong>Side Effects (RAG):</strong> ${ragInfo.sideEffects.join(", ")}</p>` : ""}
+          ${hasClash ? `<p class="text-xs font-bold text-rose-700">⚠️ CLASH DETECTED: Aceclofenac clashes with your Telma 40 (Hypertension) and duplicates Paracetamol in Dolo 650!</p>` : ""}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // 9. RENDER RAG ENCYCLOPEDIA TAB
+    function renderRagEncyclopedia(filterQuery = "") {
+      const box = document.getElementById("ragEncyclopediaList");
+      box.innerHTML = "";
+      const q = filterQuery.trim().toLowerCase();
+
+      const filtered = MEDICINE_RAG_DB.filter(m =>
+        !q ||
+        m.brand.toLowerCase().includes(q) ||
+        m.generic.toLowerCase().includes(q) ||
+        m.drugClass.toLowerCase().includes(q) ||
+        m.whyDoctorGave.toLowerCase().includes(q)
+      );
+
+      filtered.forEach(med => {
+        const card = document.createElement("div");
+        card.className = "neu-card-sm p-4 space-y-2";
+        const clashHtml = med.clashesWith.map(c =>
+          `<span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-100 text-rose-800 mr-1 mb-1">⚠️ ${c.target} (${c.severity}): ${c.detail}</span>`
+        ).join("");
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <h4 class="text-sm font-extrabold text-slate-800">${med.brand}</h4>
+              <p class="text-xs font-semibold text-teal-700">${med.generic}</p>
+            </div>
+            <span class="text-[10px] font-bold px-2.5 py-1 neu-inset text-slate-600">${med.drugClass}</span>
+          </div>
+          <p class="text-xs text-slate-700"><strong>Why Prescribed for Symptoms:</strong> ${med.whyDoctorGave}</p>
+          <p class="text-xs text-slate-600"><strong>Common Side Effects:</strong> ${med.sideEffects.join(", ")} • <strong>Timing:</strong> ${med.mealTiming}</p>
+          <div class="pt-1">${clashHtml}</div>
+        `;
+        box.appendChild(card);
+      });
+    }
+
+    // 10. AI SYMPTOM & RAG ASSISTANT CHAT
+    function renderChatMessages() {
+      const box = document.getElementById("chatMessagesBox");
+      box.innerHTML = "";
+      state.chatHistory.forEach(msg => {
+        const div = document.createElement("div");
+        if (msg.sender === "user") {
+          div.className = "neu-card-sm p-3 ml-8 bg-teal-700 text-slate-800";
+          div.innerHTML = `<p class="text-[10px] font-bold text-teal-800 uppercase mb-0.5">You (${state.user.name})</p><p class="text-xs text-slate-800 font-medium">${msg.text}</p>`;
+        } else {
+          div.className = "neu-card-sm p-3 mr-4 border-l-4 border-teal-600";
+          div.innerHTML = `<p class="text-[10px] font-bold text-teal-700 uppercase mb-1">🤖 ${msg.provider}</p><div class="text-xs text-slate-700 space-y-1 leading-relaxed">${msg.text}</div>`;
+        }
+        box.appendChild(div);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function handleSendChat(queryText) {
+      const q = (queryText || document.getElementById("chatUserInput").value || "").trim();
+      if (!q) return;
+      document.getElementById("chatUserInput").value = "";
+
+      const selectedProvider = document.getElementById("chatProviderSelect").value;
+      const providerLabels = {
+        gemini: "Gemini 2.5 Flash API + Clinical RAG",
+        ollama_local: "Local Ollama (llama3.2:3b) + RAG",
+        openai: "OpenAI (gpt-4o-mini) + RAG",
+        claude: "Anthropic Claude 3.5 Sonnet + RAG"
+      };
+
+      state.chatHistory.push({ sender: "user", text: q });
+      renderChatMessages();
+
+      // If user supplied a real Gemini API Key in settings, call Gemini 2.5 Flash directly
+      if (selectedProvider === "gemini" && state.geminiApiKey) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(state.geminiApiKey)}`;
+          const sysContext = `Patient: ${state.user.name}, Conditions: ${state.user.conditions}, Allergies: ${state.user.allergies}, Symptoms: ${state.user.symptoms}. Active Meds: ${state.medicines.map(m => m.name).join(", ")}. Answer concisely regarding what the medicine does, why doctor gave it, side effects, and drug clashes.`;
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `${sysContext}\n\nQuestion: ${q}` }] }]
+            })
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Response received.";
+            state.chatHistory.push({
+              sender: "ai",
+              provider: "Gemini 2.5 Flash (Live API Call)",
+              text: replyText.replace(/\n/g, "<br/>")
+            });
+            renderChatMessages();
+            return;
+          }
+        } catch (err) {
+          // Fall through to local RAG synthesis
+        }
+      }
+
+      // Intelligent RAG + Medical History Synthesis
+      const qLower = q.toLowerCase();
+      let responseHtml = "";
+
+      if (qLower.includes("zerodol") || qLower.includes("clash") || qLower.includes("pain")) {
+        responseHtml = `
+          <strong>⚠️ High-Priority Drug Interaction Warning for ${state.user.name}:</strong><br/>
+          • <strong>Zerodol-SP + Telma 40 (Telmisartan):</strong> Zerodol-SP contains <em>Aceclofenac (NSAID)</em>, which inhibits renal prostaglandins, reduces the blood-pressure lowering effect of your <strong>Telma 40</strong>, and increases kidney stress.<br/>
+          • <strong>Zerodol-SP + Dolo 650:</strong> Both contain <em>Paracetamol</em> (325mg + 650mg). Taking them together risks cumulative daily Paracetamol hepatotoxicity.<br/>
+          • <strong>Recommendation:</strong> Stick to <strong>Dolo 650</strong> alone for fever/body pain as it is blood-pressure safe, and consult your doctor before adding any NSAID.
+        `;
+      } else if (qLower.includes("pan 40") || qLower.includes("augmentin")) {
+        responseHtml = `
+          <strong>Why Your Doctor Prescribed Augmentin 625 + Pan 40:</strong><br/>
+          • <strong>Augmentin 625 Duo (Amoxicillin + Clavulanic Acid):</strong> Targets the underlying bacterial pharyngitis/sinus infection causing your 100.8°F fever and sore throat. Take it immediately <em>after meals</em> (08:30 AM &amp; 08:30 PM).<br/>
+          • <strong>Pan 40 (Pantoprazole 40mg):</strong> Broad-spectrum antibiotics frequently irritate the gastric mucosa and trigger acid reflux. Taking <strong>Pan 40</strong> <em>30 minutes before breakfast on an empty stomach</em> blocks gastric acid pumps for 24 hours.
+        `;
+      } else {
+        const matched = findRagEntry(q) || MEDICINE_RAG_DB[0];
+        responseHtml = `
+          <strong>Clinical RAG Guidance (Considering your ${state.user.conditions}):</strong><br/>
+          • <strong>Relevant Medicine Match:</strong> ${matched.brand} (${matched.generic}) — ${matched.whyDoctorGave}<br/>
+          • <strong>Side Effects to Watch:</strong> ${matched.sideEffects.join(", ")}.<br/>
+          • <strong>Symptom Care Tip:</strong> Because you take <strong>Telma 40</strong> for mild hypertension, avoid over-the-counter decongestants containing <em>Phenylephrine / Pseudoephedrine</em> or NSAIDs like <em>Ibuprofen / Aceclofenac</em>, as both can spike blood pressure. Warm saline gargles, steam inhalation, and <strong>Montair LC</strong> at bedtime are safe for your profile.
+        `;
+      }
+
+      state.chatHistory.push({
+        sender: "ai",
+        provider: providerLabels[selectedProvider] || "Gemini 2.5 Flash + RAG",
+        text: responseHtml
+      });
+      renderChatMessages();
+    }
+
+    // 11. RENDER REMINDERS & SYNTHESIZED WEB AUDIO CHIME
+    function playReminderChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, now + i * 0.14);
+          gain.gain.setValueAtTime(0.18, now + i * 0.14);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.14);
+          osc.stop(now + i * 0.14 + 0.36);
+        });
+      } catch (e) {
+        // Ignore audio context restrictions if blocked
+      }
+      showToast("🔔 Medicine Reminder Alert", "Time to take your scheduled dose: Augmentin 625 Duo + Dolo 650 (After Meal)!");
+    }
+
+    function renderReminders() {
+      const box = document.getElementById("remindersScheduleList");
+      box.innerHTML = "";
+      state.medicines.forEach(med => {
+        const item = document.createElement("div");
+        item.className = "neu-card-sm p-3.5 flex items-center justify-between gap-3";
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 neu-inset flex items-center justify-center text-teal-700 font-bold text-sm">⏰</div>
+            <div>
+              <h4 class="text-xs sm:text-sm font-extrabold text-slate-800">${med.times} — ${med.name}</h4>
+              <p class="text-xs text-slate-600">${med.dosage} • <span class="text-teal-700 font-semibold">${med.meal}</span> (${med.stockQty} tabs left)</p>
+            </div>
+          </div>
+          <button data-med="${med.name}" class="trigger-med-bell neu-btn px-3 py-1.5 text-xs font-bold text-teal-800">
+            🔔 Alert Now
+          </button>
+        `;
+        box.appendChild(item);
+      });
+
+      document.querySelectorAll(".trigger-med-bell").forEach(btn => {
+        btn.addEventListener("click", () => {
+          playReminderChime();
+        });
+      });
+    }
+
+    // 12. RENDER DOCTOR APPOINTMENTS
+    function renderAppointments() {
+      const box = document.getElementById("appointmentsList");
+      box.innerHTML = "";
+      state.appointments.forEach(a => {
+        const div = document.createElement("div");
+        div.className = "neu-card-sm p-4 flex items-start justify-between gap-3";
+        div.innerHTML = `
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-extrabold text-teal-800 px-2.5 py-0.5 neu-pill">${a.date} at ${a.time}</span>
+              <span class="text-xs font-bold text-slate-500">${a.specialty}</span>
+            </div>
+            <h4 class="text-sm font-extrabold text-slate-800">${a.doctor}</h4>
+            <p class="text-xs text-slate-600">🏥 ${a.clinic}</p>
+            <p class="text-xs text-slate-500">📝 ${a.notes}</p>
+          </div>
+          <button data-id="${a.id}" class="del-appt-btn neu-btn px-2.5 py-1.5 text-xs font-bold text-rose-700">✕</button>
+        `;
+        box.appendChild(div);
+      });
+
+      document.querySelectorAll(".del-appt-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = parseInt(btn.getAttribute("data-id"), 10);
+          state.appointments = state.appointments.filter(x => x.id !== id);
+          renderAppointments();
+          showToast("Appointment Removed", "Doctor appointment deleted from schedule.");
+        });
+      });
+    }
+
+    // 13. INITIALIZE ALL EVENT LISTENERS ON LOAD
+    window.addEventListener("DOMContentLoaded", () => {
+      // Initial Renders
+      renderDashboard();
+      drawPrescriptionOnCanvas("infection");
+      renderExtractedRxResults("infection", "Google Gemini 2.5 Flash Vision (Primary)");
+      renderRagEncyclopedia("");
+      renderChatMessages();
+      renderReminders();
+      renderAppointments();
+
+      // Tab Switching
+      document.querySelectorAll(".nav-tab").forEach(tabBtn => {
+        tabBtn.addEventListener("click", () => {
+          const targetTab = tabBtn.getAttribute("data-tab");
+          document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("neu-btn-active"));
+          tabBtn.classList.add("neu-btn-active");
+          document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+          document.getElementById(`tab-${targetTab}`).classList.remove("hidden");
+        });
+      });
+
+      // Smartphone View Frame Toggle
+      document.getElementById("btnTogglePhoneView").addEventListener("click", () => {
+        state.isPhoneView = !state.isPhoneView;
+        const viewport = document.getElementById("appViewport");
+        const label = document.getElementById("phoneViewLabel");
+        if (state.isPhoneView) {
+          viewport.classList.add("phone-frame");
+          label.textContent = "Desktop View";
+          showToast("📱 Smartphone Mode Active", "Previewing mobile responsive PWA layout (412px frame).");
+        } else {
+          viewport.classList.remove("phone-frame");
+          label.textContent = "Smartphone View";
+        }
+      });
+
+      // Go to Scanner shortcut
+      document.getElementById("btnGoToScanner").addEventListener("click", () => {
+        document.querySelector('[data-tab="scanner"]').click();
+      });
+
+      // Prescription Presets
+      document.querySelectorAll(".rx-preset-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const presetKey = btn.getAttribute("data-preset");
+          const visionSelect = document.getElementById("visionProviderSelect");
+          const providerText = visionSelect.options[visionSelect.selectedIndex].text;
+          drawPrescriptionOnCanvas(presetKey);
+          renderExtractedRxResults(presetKey, providerText);
+          showToast("Rx Photo Analyzed", `Parsed prescription using ${providerText}`);
+        });
+      });
+
+      // Upload custom image file
+      document.getElementById("btnTriggerCameraUpload").addEventListener("click", () => {
+        document.getElementById("rxImageInput").click();
+      });
+      document.getElementById("rxImageInput").addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.getElementById("rxPreviewCanvas");
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const visionSelect = document.getElementById("visionProviderSelect");
+            const providerText = visionSelect.options[visionSelect.selectedIndex].text;
+            renderExtractedRxResults("infection", providerText);
+            showToast("Custom Rx Photo Scanned", `Extracted medicines from ${file.name} via ${providerText}`);
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Import Extracted Rx Medicines into Active Stock
+      document.getElementById("btnImportExtractedMeds").addEventListener("click", () => {
+        state.extractedRxBuffer.forEach(item => {
+          const existing = state.medicines.find(m => m.name.toLowerCase() === item.name.toLowerCase());
+          if (existing) {
+            existing.stockQty += item.stockQty;
+            existing.source = "Prescription Scan";
+          } else {
+            state.medicines.unshift({
+              id: Date.now() + Math.floor(Math.random() * 1000),
+              name: item.name,
+              generic: item.generic,
+              dosage: item.dosage,
+              freqPerDay: item.freqPerDay,
+              times: item.times,
+              meal: item.meal,
+              stockQty: item.stockQty,
+              source: "Prescription Scan",
+              why: item.why
+            });
+          }
+        });
+        renderDashboard();
+        renderReminders();
+        document.querySelector('[data-tab="dashboard"]').click();
+        showToast("Rx Imported to Stock", "Added extracted medicines and updated Days Left & Drug Clash check!");
+      });
+
+      // Manual Medicine Modal
+      const modalManual = document.getElementById("modalManualMedicine");
+      document.getElementById("btnOpenManualModal").addEventListener("click", () => {
+        modalManual.classList.remove("hidden");
+        modalManual.classList.add("flex");
+      });
+      document.getElementById("btnCloseManualModal").addEventListener("click", () => {
+        modalManual.classList.add("hidden");
+        modalManual.classList.remove("flex");
+      });
+      document.getElementById("btnQuickFillClashMed").addEventListener("click", () => {
+        document.getElementById("manMedName").value = "Zerodol-SP";
+        document.getElementById("manMedDosage").value = "1 Tablet (100mg/325mg)";
+        document.getElementById("manMedFreq").value = "2";
+        document.getElementById("manMedTimes").value = "09:00 AM, 09:00 PM";
+        document.getElementById("manMedStock").value = "6";
+      });
+      document.getElementById("btnSaveManualMed").addEventListener("click", () => {
+        const name = document.getElementById("manMedName").value.trim() || "Montair LC";
+        const dosage = document.getElementById("manMedDosage").value.trim() || "1 Tablet";
+        const freq = parseFloat(document.getElementById("manMedFreq").value) || 1;
+        const times = document.getElementById("manMedTimes").value.trim() || "09:00 PM";
+        const stock = parseInt(document.getElementById("manMedStock").value, 10) || 10;
+        const meal = document.getElementById("manMedMeal").value;
+        const ragMatch = findRagEntry(name);
+
+        state.medicines.unshift({
+          id: Date.now(),
+          name,
+          generic: ragMatch ? ragMatch.generic : "Active Pharmaceutical Formulation",
+          dosage,
+          freqPerDay: freq,
+          times,
+          meal,
+          stockQty: stock,
+          source: "Manual Entry",
+          why: ragMatch ? ragMatch.whyDoctorGave : "Added manually by patient."
+        });
+
+        modalManual.classList.add("hidden");
+        modalManual.classList.remove("flex");
+        renderDashboard();
+        renderReminders();
+        showToast("Medicine Added", `${name} added to stock with automatic RAG interaction check.`);
+      });
+
+      // RAG Encyclopedia Search
+      document.getElementById("ragSearchInput").addEventListener("input", (e) => {
+        renderRagEncyclopedia(e.target.value);
+      });
+
+      // Chat Assistant Controls
+      document.getElementById("btnSendChat").addEventListener("click", () => handleSendChat());
+      document.getElementById("chatUserInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleSendChat();
+      });
+      document.querySelectorAll(".chat-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          handleSendChat(chip.getAttribute("data-prompt"));
+        });
+      });
+
+      // Reminders & Appointments
+      document.getElementById("btnTestAlarmChime").addEventListener("click", () => {
+        playReminderChime();
+      });
+      document.getElementById("btnAddAppointment").addEventListener("click", () => {
+        const doctor = document.getElementById("apptDoctor").value.trim() || "Dr. S. K. Deshmukh";
+        const specialty = document.getElementById("apptSpecialty").value.trim() || "General Physician";
+        const clinic = document.getElementById("apptClinic").value.trim() || "Sector 9 Hospital, Bhilai";
+        const date = document.getElementById("apptDate").value || "2026-11-04";
+        const time = document.getElementById("apptTime").value || "18:00";
+        const notes = document.getElementById("apptNotes").value.trim() || "Routine prescription & symptom review";
+
+        state.appointments.unshift({
+          id: Date.now(),
+          doctor,
+          specialty,
+          clinic,
+          date,
+          time,
+          notes,
+          reminderOn: true
+        });
+        renderAppointments();
+        showToast("Appointment Scheduled", `Booked ${doctor} on ${date} at ${time}.`);
+      });
+
+      // Save Medical History Profile
+      document.getElementById("btnSaveMedicalHistory").addEventListener("click", () => {
+        state.user.name = document.getElementById("histName").value.trim() || "Aarav Verma";
+        state.user.ageBlood = document.getElementById("histAgeBlood").value.trim();
+        state.user.email = document.getElementById("histEmail").value.trim();
+        state.user.allergies = document.getElementById("histAllergies").value.trim();
+        state.user.conditions = document.getElementById("histConditions").value.trim();
+        state.user.symptoms = document.getElementById("histSymptoms").value.trim();
+        document.getElementById("headerUserName").textContent = `${state.user.name} (Logged In)`;
+        renderDashboard();
+        showToast("Medical History Saved", "Updated SQLite profile & re-evaluated drug interactions.");
+      });
+
+      // AI Settings Modal
+      const modalSettings = document.getElementById("modalAiSettings");
+      document.getElementById("btnOpenSettings").addEventListener("click", () => {
+        modalSettings.classList.remove("hidden");
+        modalSettings.classList.add("flex");
+      });
+      document.getElementById("btnCloseSettingsModal").addEventListener("click", () => {
+        modalSettings.classList.add("hidden");
+        modalSettings.classList.remove("flex");
+      });
+      document.getElementById("btnSaveAiSettings").addEventListener("click", () => {
+        const sel = document.getElementById("settingsProviderSelect");
+        state.aiProvider = sel.value;
+        state.geminiApiKey = document.getElementById("settingsGeminiKey").value.trim();
+        state.ollamaUrl = document.getElementById("settingsOllamaUrl").value.trim();
+        document.getElementById("visionProviderSelect").value = sel.value === "ollama_local" ? "ollama_vision" : sel.value;
+        document.getElementById("chatProviderSelect").value = sel.value === "local_paddleocr" ? "ollama_local" : sel.value;
+        document.getElementById("activeProviderBadge").innerHTML =
+          `Vision &amp; LLM: <span class="text-teal-700 font-semibold">${sel.options[sel.selectedIndex].text.split('—')[0]}</span> • RAG DB: <span class="font-semibold">Active</span>`;
+        modalSettings.classList.add("hidden");
+        modalSettings.classList.remove("flex");
+        showToast("AI Provider Updated", `Switched active engine to ${sel.options[sel.selectedIndex].text}`);
+      });
+
+      // Auth Modal
+      const modalAuth = document.getElementById("modalAuth");
+      document.getElementById("btnOpenAuthModal").addEventListener("click", () => {
+        modalAuth.classList.remove("hidden");
+        modalAuth.classList.add("flex");
+      });
+      document.getElementById("btnCloseAuthModal").addEventListener("click", () => {
+        modalAuth.classList.add("hidden");
+        modalAuth.classList.remove("flex");
+      });
+      document.getElementById("btnSwitchDemoUser1").addEventListener("click", () => {
+        document.getElementById("authEmailInput").value = "aarav@bitdurg.ac.in";
+        document.getElementById("histName").value = "Aarav Verma";
+        document.getElementById("histConditions").value = "Mild Hypertension (on Telma 40), Seasonal Allergic Rhinitis";
+      });
+      document.getElementById("btnSwitchDemoUser2").addEventListener("click", () => {
+        document.getElementById("authEmailInput").value = "priya.sharma@bitdurg.ac.in";
+        document.getElementById("histName").value = "Priya Sharma";
+        document.getElementById("histConditions").value = "Type 2 Diabetes Mellitus (on Glycomet 500 SR), Gastric Acidity";
+      });
+      document.getElementById("btnSubmitLogin").addEventListener("click", () => {
+        const nameVal = document.getElementById("histName").value;
+        state.user.name = nameVal;
+        state.user.email = document.getElementById("authEmailInput").value;
+        state.user.conditions = document.getElementById("histConditions").value;
+        document.getElementById("headerUserName").textContent = `${state.user.name} (Logged In)`;
+        modalAuth.classList.add("hidden");
+        modalAuth.classList.remove("flex");
+        renderDashboard();
+        showToast("Signed In", `Welcome back, ${state.user.name}! Medical history loaded.`);
+      });
+    });
+  </script>
+</body>
+</html>

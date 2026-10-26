@@ -1,76 +1,54 @@
-# MediHelp Prototype — Photo → Medicine List
+# Medi Help — AI Prescription Scanner, Drug Interaction RAG & Smart Stock Companion
 
-Bare-minimum prototype: upload or photograph a prescription, get back a list
-of medicines with dose/frequency, using the Gemini API for the image→text work.
+**B.Tech V Semester Minor Project (AI)**  
+**Architecture**: Python (`FastAPI` + `Google Gemini API` + `LiteLLM/Ollama` + `ChromaDB/SQLite`) for all core logic + Minimal `Node.js` (`Express`) server for the Neumorphic mobile-ready UI.
 
-```
-medihelp-prototype/
-├── backend/            Python (Flask) — talks to Gemini, exposes /api/analyze
-│   ├── app.py              # ONLY routing / HTTP handling
-│   ├── gemini_service.py   # ONLY Gemini API calls + JSON parsing
-│   ├── requirements.txt
-│   └── .env.example
-└── frontend/            Node.js (Express) — serves the web page
-    ├── server.js            # ONLY static file serving
-    └── public/
-        ├── index.html
-        ├── style.css
-        ├── camera.js        # ONLY getting an image (file picker / webcam)
-        ├── api.js           # ONLY calling the backend
-        └── main.js          # ONLY UI wiring + rendering results
-```
+---
 
-## 1. Backend setup (Python)
+## Key Features Implemented
 
+1. **Python Core Logic + Minimal Node.js Neumorphic UI**:
+   - All OCR, RAG, Drug-Interaction checking, Stock depletion math, and authentication run in `backend/app.py`, `backend/rag_engine.py`, and `backend/llm_vision_router.py`.
+   - `frontend-node/server.js` serves the tactile Neumorphic UI (`#e0e5ec` soft extruded shadows) and proxies `/api/*` to Python.
+2. **User Login, Credentials & Medical History Profile**:
+   - Stores chronic conditions (e.g., Hypertension), known drug allergies (e.g., Sulfa, Penicillin), and active symptoms in SQLite.
+3. **Smart Home Medicine Stock, Days Left & Auto-Buy Date**:
+   - Calculates `days_left = home_stock_qty / frequency_per_day` and highlights exact restock dates.
+   - Supports both **AI Prescription Photo Upload** and **Manual Medicine Entry**.
+4. **Huge Medicine Database + Clinical RAG + Side-Effect & Clash Detector**:
+   - Explains **what each medicine does** and **why the doctor prescribed it** given the user's symptoms.
+   - Detects dangerous **Drug-Drug Clashes** (e.g., *Zerodol-SP + Telma 40* NSAID-ARB interaction, or *Zerodol-SP + Dolo 650* duplicate Paracetamol hepatotoxicity risk) and **Patient History Contraindications**.
+5. **Smartphone Ready (PWA + Mobile Preview Mode)**:
+   - Installable on Android & iOS via Web App Manifest, camera capture (`accept="image/*" capture="environment"`), and Web Notification / Web Audio reminders.
+6. **Gemini Primary + Pluggable Multi-API & Local Ollama/PaddleOCR**:
+   - **Primary**: `gemini-2.5-flash` for both Prescription Vision OCR and RAG Chat.
+   - **Testing / Local Dev**: Switch seamlessly in the UI Settings or `.env` to **Local Ollama Vision** (`llama3.2-vision:11b`, `qwen2.5-vl`), **Local PaddleOCR + Ollama** (`llama3.2:3b`), **OpenAI** (`gpt-4o-mini`), or **Anthropic Claude** (`claude-3-5-sonnet`).
+
+---
+
+## Quick Start Instructions
+
+### 1. Start the Python Backend
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-cp .env.example .env            # Windows: copy .env.example .env
-# then edit .env and paste your Gemini API key
-# get one free at https://aistudio.google.com/app/apikey
-
-python app.py
+cp .env.example .env       # Add your GEMINI_API_KEY
+uvicorn app:app --reload --port 8000
 ```
 
-Backend now runs at `http://localhost:5000`.
-
-## 2. Frontend setup (Node.js)
-
-In a second terminal:
-
+### 2. Start the Minimal Node.js Neumorphic Server
 ```bash
-cd frontend
+cd frontend-node
 npm install
 npm start
+# Open http://localhost:3000 on your laptop or smartphone on the same Wi-Fi!
 ```
 
-Frontend now runs at `http://localhost:3000`.
-
-## 3. Using it
-
-- **On your Windows PC:** open `http://localhost:3000` in a browser.
-  Use **"Upload / Take Photo"** to pick a file, or **"Use Webcam"** for a live
-  capture from your PC's webcam.
-- **On your Android phone (same Wi-Fi):**
-  1. Find your PC's LAN IP (`ipconfig` on Windows, look for IPv4 address).
-  2. On your phone's browser, go to `http://<that-IP>:3000`.
-  3. Tap **"Upload / Take Photo"** — this opens the phone's native camera
-     directly, or lets you pick an existing photo.
-  4. Edit `frontend/public/api.js` and change `BACKEND_URL` to
-     `http://<that-IP>:5000` so the phone can reach the backend too.
-
-> Live webcam capture (`getUserMedia`) only works on `localhost` or over
-> HTTPS — that's a browser security rule, not a bug. That's why Android uses
-> the file-picker/native-camera route instead, which works over plain HTTP.
-
-## Notes / limits (it's a prototype)
-
-- No database, no auth, no history — a single screen: photo in, list out.
-- Accuracy depends entirely on Gemini reading the prescription image; blurry
-  or very messy handwriting may come back incomplete — check the `notes`
-  field in the response for warnings.
-- `GEMINI_MODEL` in `.env` defaults to `gemini-2.5-flash`; swap to another
-  vision-capable Gemini model name there if you prefer.
+### 3. Optional: Running Vision & LLM 100% Locally for Testing
+```bash
+# Install Ollama from https://ollama.com
+ollama pull llama3.2-vision:11b
+ollama pull llama3.2:3b
+```

@@ -1,0 +1,13 @@
+{
+  "name": "medi-help-neumorphic-ui",
+  "version": "1.0.0",
+  "description": "Minimal Node.js Neumorphic UI & PWA Server for Medi Help (Python FastAPI Backend)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "http-proxy-middleware": "^3.0.2"
+  }
+}
